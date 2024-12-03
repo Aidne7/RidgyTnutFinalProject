@@ -6,62 +6,60 @@ import sys
 import os
 from datetime import datetime, timedelta
 
-# Parse command-line arguments
+# Check command-line arguments for correct usage
 if len(sys.argv) != 5:
     print("Usage: python normality_test_speedy.py <days_since_20110101> <ensemble_name> <variable_name> <output_dir>")
     sys.exit(1)
 
-days_since_20110101 = int(sys.argv[1])  # Number of days since 1 Jan 2011
-ensemble_name = sys.argv[2]  # e.g., reference_ens or perturbed_ens
-variable_name = sys.argv[3]  # e.g., u, v, t
-output_dir = sys.argv[4]  # Directory to save pickle files
+# Parse input arguments
+days_since_20110101 = int(sys.argv[1])
+ensemble_name = sys.argv[2]
+variable_name = sys.argv[3]
+output_dir = sys.argv[4]
 
-# Ensure output directory exists
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
+# Calculate the date based on days since January 1, 2011
+date = (datetime(2011, 1, 1, 0, 0) + timedelta(days=days_since_20110101)).strftime('%Y%m%d%H%M')
 
-# Compute the date in ccyymmddhh format
-date = (datetime(2011, 1, 1, 0, 0) + timedelta(days=days_since_20110101)).strftime('%Y%m%d%H')
+# Construct the path to the NetCDF file
+file_path = f"/fs/ess/PAS2856/SPEEDY_ensemble_data/{ensemble_name}/{date}.nc"
 
-# Path to NetCDF file
-file_path = f"/fs/ess/PAS2856/SPEEDY_ensemble_data/{ensemble_name}/{date}00.nc"
-
-# Load data using netCDF4
-
+# Open the NetCDF file and read the specified variable
 ds = Dataset(file_path, 'r')
-data = ds.variables[variable_name][:]  # Load the variable (assumes float array)
-sigma = ds.variables['lev'][:]  # Model sigma levels
+data = ds.variables[variable_name][:]  # Load the data as a float array
+sigma = ds.variables['lev'][:]  # Load model sigma levels
 
+# Display the original shape of the data
+print(f"Original data shape: {data.shape}")
 
-# Debugging: Print shape of data
-print("Data shape:", data.shape)
+# Extract dimensions for easier handling
+num_ens, num_time, num_levels, num_lat, num_lon = data.shape
 
+# Select the first time step across all ensembles and levels
+data = data[:, 0, :, :, :]  # Simplify the data to include only the first time index
 
-# Adjust for time dimension if present
-if len(data.shape) == 5:  # e.g., (time, levels, lat, lon, ensemble)
-    num_time, num_levels, num_lat, num_lon, num_ens = data.shape
-    data = data[0, :, :, :, :]  # Select first time step
-elif len(data.shape) == 4:  # Expected shape
-    num_levels, num_lat, num_lon, num_ens = data.shape
+# Confirm the new shape of the data
+print("Adjusted data shape:", data.shape)
 
-# Initialize an empty array for p-values
+# Initialize an array to store p-values for each grid point
 p_values = np.empty((num_levels, num_lat, num_lon))
 
-# Loop through grid points and calculate p-values
+# Iterate over each level, latitude, and longitude to compute p-values
 for k in range(num_levels):
     for j in range(num_lat):
         for i in range(num_lon):
-            ensemble_values = data[k, j, i, :]
-            
-            # Perform Shapiro-Wilk test and extract p-value
-            _, p_value = shapiro(ensemble_values)
+            ensemble_values = data[:, k, j, i]  # Extract ensemble values for the current grid point
 
+            # Perform the Shapiro-Wilk test and store the p-value
+            _, p_value = shapiro(ensemble_values)
             p_values[k, j, i] = p_value
 
-# Compute theoretical pressure
-theoretical_pressure = sigma * 1000  # Assuming surface pressure is 1000 hPa
+# Confirm the shape of the p-values array
+print("Shape of p-values array:", p_values.shape)
 
-# Prepare dictionary for saving
+# Calculate theoretical pressure from sigma levels
+theoretical_pressure = sigma * 1000  # Convert sigma levels to pressure (Pa)
+
+# Create a dictionary to save the results
 result_dict = {
     "date": date,
     "vname": variable_name,
@@ -69,8 +67,8 @@ result_dict = {
     "theoretical_pressure": theoretical_pressure
 }
 
-# Create filename and save pickle
-pickle_filename = f"{variable_name}_{ensemble_name}_{date}00_pvalues.pkl"
+# Generate the output filename and save the dictionary as a pickle file
+pickle_filename = f"{variable_name}_{ensemble_name}_{date}_pvalues.pkl"
 pickle_path = os.path.join(output_dir, pickle_filename)
 
 with open(pickle_path, 'wb') as f:
