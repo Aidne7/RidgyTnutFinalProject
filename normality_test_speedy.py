@@ -52,12 +52,10 @@ for k in range(num_levels):
     for j in range(num_lat):
         for i in range(num_lon):
             ensemble_values = data[k, j, i, :]
-            try:
-                # Perform Shapiro-Wilk test and extract p-value
-                _, p_value = shapiro(ensemble_values)
-            except ValueError:
-                # Handle cases where test fails due to insufficient variability
-                p_value = np.nan
+            
+            # Perform Shapiro-Wilk test and extract p-value
+            _, p_value = shapiro(ensemble_values)
+
             p_values[k, j, i] = p_value
 
 # Compute theoretical pressure
