@@ -66,7 +66,6 @@ print("Rejected null hypothesis shape:", rejected_4d.shape)
 #Part C
 
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 # Plotting
 # (i) Variation with Latitude
@@ -102,7 +101,6 @@ plt.savefig('Rejection vs Time')
 # Heatmap: Latitude vs Time
 heatmap_data = np.sum(rejected_4d, axis=1)  # Sum over model levels
 plt.figure(figsize=(12, 8))
-sns.heatmap(heatmap_data, cmap="viridis", cbar_kws={'label': 'Rejections'})
 plt.xlabel("Latitude Index")
 plt.ylabel("Time Index")
 plt.title("Heatmap of Null Hypothesis Rejections (Latitude vs Time)")
@@ -120,4 +118,4 @@ hypothesis rejections become visually indistinguishable from those of the refere
 ensemble? If yes, when does that happen?
 
 """
-=======
+
