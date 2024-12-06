@@ -8,22 +8,21 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import pandas as pd
 
-# Argument parser
+# Parse command-line arguments for configuring the analysis
 parser = argparse.ArgumentParser(description="Examine Normality Test P-Values with FDR Control")
-parser.add_argument("--start_date", type=str, required=True, help="Start date (YYYY-MM-DD)")
-parser.add_argument("--end_date", type=str, required=True, help="End date (YYYY-MM-DD)")
-parser.add_argument("--variable", type=str, required=True, help="Variable to analyze")
-parser.add_argument("--ensemble_type", type=str, choices=["reference", "perturbed"], required=True)
-parser.add_argument("--interval", type=int, default=1, help="Interval in days between pickle files")
-
+parser.add_argument("--start_date", type=str, required=True, help="Start date in YYYY-MM-DD format")
+parser.add_argument("--end_date", type=str, required=True, help="End date in YYYY-MM-DD format")
+parser.add_argument("--variable", type=str, required=True, help="Variable name to analyze")
+parser.add_argument("--ensemble_type", type=str, choices=["reference", "perturbed"], required=True, help="Type of ensemble")
+parser.add_argument("--interval", type=int, default=1, help="Interval (in days) between data files to process")
 args = parser.parse_args()
 
-# Generate date range
+# Generate a list of dates based on the provided start date, end date, and interval
 start_date = datetime.strptime(args.start_date, "%Y-%m-%d")
 end_date = datetime.strptime(args.end_date, "%Y-%m-%d")
 dates = [start_date + timedelta(days=i) for i in range(0, (end_date - start_date).days + 1, args.interval)]
 
-# Load pickle files
+# Load p-value data from pickle files for the specified dates
 pval_arrays = []
 for date in dates:
     file_path = os.path.join(
@@ -36,29 +35,31 @@ for date in dates:
             if 'pvalues' in data:
                 pval_arrays.append(data['pvalues'])
 
-# Combine into a 4D array
-pvals_4d = np.stack(pval_arrays)  # Shape: (time, 8, 48, 96)
+# Stack the p-value arrays into a 4D array (time, levels, latitude, longitude)
+pvals_4d = np.stack(pval_arrays)
 
-# Flatten for FDR correction
+# Flatten the 4D p-value array into 1D for False Discovery Rate (FDR) correction
 pvals_flat = pvals_4d.ravel()
 
-# Perform BY correction
+# Perform Benjamini-Yekutieli FDR correction on the p-values
 adjusted_pvals = false_discovery_control(pvals_flat, method="by")
 
-# Create a boolean array indicating whether each p-value is rejected at alpha = 0.05
+# Identify rejections of the null hypothesis based on a significance threshold (alpha)
 alpha = 0.05
 rejected = adjusted_pvals < alpha
 
-# Reshape results back to 4D
+# Reshape the adjusted p-values and rejection results back into 4D
 adjusted_pvals_4d = adjusted_pvals.reshape(pvals_4d.shape)
 rejected_4d = rejected.reshape(pvals_4d.shape)
 
-# Output shapes for verification
+# Print the dimensions of the adjusted arrays for verification
 print("Adjusted p-values shape:", adjusted_pvals_4d.shape)
 print("Rejected null hypothesis shape:", rejected_4d.shape)
 
 def create_plot(data, title, xlabel, ylabel, filename, x_extent, y_extent, y_ticks=None):
-    """Generates a heatmap plot."""
+    """
+    Generate and save a heatmap plot for the given data.
+    """
     fig, ax = plt.subplots(figsize=(12, 6))
     im = ax.imshow(
         data.T,
@@ -68,35 +69,33 @@ def create_plot(data, title, xlabel, ylabel, filename, x_extent, y_extent, y_tic
         extent=[x_extent[0], x_extent[1], y_extent[0], y_extent[1]],
     )
 
-    # Format x-axis with dates
+    # Format x-axis as dates
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-    ax.xaxis.set_major_locator(mdates.DayLocator(interval=5))  # Show major ticks every 5 days
+    ax.xaxis.set_major_locator(mdates.DayLocator(interval=5))
     ax.xaxis.set_minor_locator(mdates.DayLocator(interval=1))
     plt.xticks(rotation=45)
 
-    # Add labels and title
+    # Add title, labels, and optional y-ticks
     ax.set_title(title, fontsize=14)
     ax.set_xlabel(xlabel, fontsize=12)
     ax.set_ylabel(ylabel, fontsize=12)
-
     if y_ticks:
         ax.set_yticks(y_ticks)
 
-    # Add colorbar
+    # Add a colorbar with a label
     cbar = plt.colorbar(im, ax=ax)
     cbar.set_label("Percentage of Null Hypothesis Rejections", fontsize=12)
 
-    # Add gridlines for readability
+    # Add gridlines for clarity
     ax.grid(color='white', linestyle='--', linewidth=0.5)
 
-    # Save and show plot
+    # Save the plot
     plt.tight_layout()
     plt.savefig(filename)
     plt.close()
 
-# Prepare data for the three plots
-# (i) Null hypothesis rejections by average of latitude and model levels over time
-rejections_time_avg_lat_level = np.sum(rejected_4d, axis=(1, 2))  # Sum over model levels and latitudes
+# (i) Null hypothesis rejections averaged over latitude and model levels across time
+rejections_time_avg_lat_level = np.sum(rejected_4d, axis=(1, 2))
 total_lat_levels = rejected_4d.shape[1] * rejected_4d.shape[2]
 percent_rejections_time_avg_lat_level = (rejections_time_avg_lat_level / total_lat_levels) * 100
 time_steps = pd.date_range(start=args.start_date, end=args.end_date, freq=f"{args.interval}D")
@@ -108,11 +107,11 @@ create_plot(
     "Average Latitude & Model Levels",
     f"{args.variable}_{args.ensemble_type}_time_avg_lat_level.png",
     x_extent=[mdates.date2num(time_steps[0]), mdates.date2num(time_steps[-1])],
-    y_extent=[0, 1],  # Set an appropriate y-range
+    y_extent=[0, 1],
 )
 
 # (ii) Null hypothesis rejections by latitude over time
-rejections_time_lat = np.sum(rejected_4d, axis=(1, 2))  # Sum over model levels and longitudes
+rejections_time_lat = np.sum(rejected_4d, axis=(1, 2))
 percent_rejections_time_lat = (rejections_time_lat / (rejected_4d.shape[2] * rejected_4d.shape[3])) * 100
 
 create_plot(
@@ -125,9 +124,8 @@ create_plot(
     y_extent=[0, rejected_4d.shape[3]],
 )
 
-# (iii) Null hypothesis rejections by theoretical pressure using model levels over time
-# Assuming model levels correspond to pressure levels; adapt accordingly if needed
-rejections_time_pressure = np.sum(rejected_4d, axis=(2, 3))  # Sum over latitudes and longitudes
+# (iii) Null hypothesis rejections by model levels (pressure) over time
+rejections_time_pressure = np.sum(rejected_4d, axis=(2, 3))
 percent_rejections_time_pressure = (rejections_time_pressure / (rejected_4d.shape[2] * rejected_4d.shape[3])) * 100
 
 create_plot(
@@ -141,7 +139,3 @@ create_plot(
 )
 
 print("Plots generated successfully!")
-
-
-#TYLER USE THIS: --start_date 2011-01-02 --end_date 2011-11-20 --variable t --ensemble_type perturbed
-
