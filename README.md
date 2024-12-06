@@ -15,7 +15,7 @@ Reference
 ![image](https://github.com/user-attachments/assets/d284360c-ec00-4322-95fb-25f99ab8ecea)
 
 
-Additionally, when looking at variables that dealt with heights, the lower heights (higher pressures) always had more more null hypothesis rejections.
+Additionally, when looking at variables that dealt with heights, the lower heights (higher pressures) always had more null hypothesis rejections.
 
 
 Perturbed
@@ -29,5 +29,11 @@ Reference
 
 2.
 They became visually indistinguishable at different rates. In most cases, they were all visually indistinguishable by some time around August through November. This has to do with the improper biases that are applied throughout the model's lifespan.
+
+
+Chat GPT links -
+https://chatgpt.com/share/67527ed8-7c4c-8002-87e2-e200cc0dc086
+https://chatgpt.com/share/67527f14-dc54-8002-934a-b80617ec4a0b
+https://chatgpt.com/share/67527f40-e20c-8002-9a54-2c66de3cdeb6
 
 
