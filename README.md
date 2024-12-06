@@ -38,7 +38,7 @@ Reference
 
 
 2.
-They became visually indistinguishable at different rates. In most cases, they were all visually indistinguishable by some time around August through November. This has to do with the improper biases that are applied throughout the model's lifespan. 
+They became visually indistinguishable at different rates. In most cases, they were all visually indistinguishable by some time around August through November. This has to do with the improper biases that are applied throughout the model's lifespan, particularly the sensitivity of the reference model beginning with bad intitial conditions.
 
 
 Chat GPT links -
