@@ -69,10 +69,13 @@ def create_plot(data, title, xlabel, ylabel, filename, x_extent, y_extent, y_tic
         extent=[x_extent[0], x_extent[1], y_extent[0], y_extent[1]],
     )
 
-    # Format x-axis as dates
+
+
+    # Format x-axis with dates
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-    ax.xaxis.set_major_locator(mdates.DayLocator(interval=5))
-    ax.xaxis.set_minor_locator(mdates.DayLocator(interval=1))
+    ax.xaxis.set_major_locator(mdates.DayLocator(interval=10))  # Show major ticks every 10 days
+    ax.xaxis.set_minor_locator(mdates.DayLocator(interval=5))
+
     plt.xticks(rotation=45)
 
     # Add title, labels, and optional y-ticks
@@ -94,9 +97,11 @@ def create_plot(data, title, xlabel, ylabel, filename, x_extent, y_extent, y_tic
     plt.savefig(filename)
     plt.close()
 
-# (i) Null hypothesis rejections averaged over latitude and model levels across time
-rejections_time_avg_lat_level = np.sum(rejected_4d, axis=(1, 2))
-total_lat_levels = rejected_4d.shape[1] * rejected_4d.shape[2]
+
+# (i) Null hypothesis rejections by average of latitude and model levels over time
+rejections_time_avg_lat_level = np.sum(rejected_4d, axis=(1, 2))  # Sum over model levels and latitudes
+total_lat_levels = rejected_4d.shape[1] * rejected_4d.shape[2] 
+
 percent_rejections_time_avg_lat_level = (rejections_time_avg_lat_level / total_lat_levels) * 100
 time_steps = pd.date_range(start=args.start_date, end=args.end_date, freq=f"{args.interval}D")
 
@@ -121,7 +126,7 @@ create_plot(
     "Latitude Index",
     f"{args.variable}_{args.ensemble_type}_time_lat.png",
     x_extent=[mdates.date2num(time_steps[0]), mdates.date2num(time_steps[-1])],
-    y_extent=[0, rejected_4d.shape[3]],
+    y_extent=[-96, rejected_4d.shape[3]],
 )
 
 # (iii) Null hypothesis rejections by model levels (pressure) over time
@@ -134,7 +139,7 @@ create_plot(
     "Time",
     "Model Levels (Theoretical Pressure)",
     f"{args.variable}_{args.ensemble_type}_time_pressure.png",
-    x_extent=[mdates.date2num(time_steps[0]), mdates.date2num(time_steps[-1])],
+    x_extent=[mdates.date2num(time_steps[0]), mdates.date2num(time_steps[-1])], #set y extent
     y_extent=[0, rejected_4d.shape[1]],
 )
 
